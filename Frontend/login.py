@@ -53,7 +53,6 @@ loginButton = tk.Button(login, text="Login (User)", command=lambda: loginAuthent
 accountImageLabel.pack(expand=True)
 usernameEntry.pack()
 passwordEntry.pack()
-#incorrectPassword.pack()
 loginButton.pack(pady=10)
 # User Home Screen UI
 homeScreen = tk.Frame(root)
