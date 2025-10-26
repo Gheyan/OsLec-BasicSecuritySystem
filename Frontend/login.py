@@ -9,7 +9,7 @@ Accounts = {
 }
 # Root Window
 root = tk.Tk()
-root.state("zoomed")
+root.attributes("-fullscreen", True)
 root.title("Gayagoy Basic Security System")
 root.configure(bg="lightblue")
 # Images
@@ -49,7 +49,7 @@ placeholder(usernameEntry, "Enter username")
 passwordEntry = tk.Entry(login)
 placeholder(passwordEntry, "Enter password", showCharacter="*")
 incorrectPassword = tk.Label(login, text="Incorrect Username or Password", fg="red")
-loginButton = tk.Button(login, text="Login (User)", command=lambda: loginAuthentication("user"))
+loginButton = tk.Button(login, text="Login", command=lambda: loginAuthentication("user"))
 accountImageLabel.pack(expand=True)
 usernameEntry.pack()
 passwordEntry.pack()
@@ -125,7 +125,9 @@ tk.Label(taskbarAdmin, image=recycleBinSmall).pack(side="left", padx=10)
 tk.Label(taskbarAdmin, image=computerSmall).pack(side="left", padx=10)
 tk.Label(taskbarAdmin, image=folderSmall).pack(side="left", padx=10)
 adminSmall = load_image("Frontend/Images/Admin.png", (30, 30))
-tk.Label(taskbarAdmin, image=adminSmall).pack(side="left", padx=10)
+adminSmall = tk.Label(taskbarAdmin, image=adminSmall, cursor="hand2")
+adminSmall.pack(side="left", padx=10)
+adminSmall.bind("<Button-1>", lambda e: openAdminMonitor())
 logoutAdminButton = tk.Button(taskbarAdmin, text="Logout")
 logoutAdminButton.pack(side="right", padx=10)
 # Switching between screens
