@@ -1,26 +1,45 @@
 # Import libraries
 import tkinter as tk
+from tkinter import ttk
 from PIL import Image, ImageTk
 from datetime import datetime
+
+# Icons
+images = {}
+def load_image(path, size):
+    """Load and resize an image, removing dark or black backgrounds."""
+    global images
+    key = f"{path}|{size}"
+    if key in images:
+        return images[key]
+
+    img = Image.open(path).convert("RGBA").resize(size, Image.LANCZOS)
+    new_data = []
+    for r, g, b, a in img.getdata():
+        if r < 100 and g < 100 and b < 100:
+            new_data.append((r, g, b, 0))
+        else:
+            new_data.append((r, g, b, a))
+    img.putdata(new_data)
+    photo = ImageTk.PhotoImage(img)
+    images[key] = photo
+    return photo
+
+
+
 # Account Placeholder for Login
 Accounts = {
     "user": {"password": "userpass", "role": "user"},
     "admin": {"password": "adminpass", "role": "admin"}
 }
+
 # Root Window
 root = tk.Tk()
 root.attributes("-fullscreen", True)
 root.title("Gayagoy Basic Security System")
 root.configure(bg="lightblue")
-# Images
-images = {}
-def load_image(path, size):
-    img = Image.open(path)
-    img = img.resize(size)
-    photo = ImageTk.PhotoImage(img)
-    images[path] = photo
-    return photo
-def placeholder( entry, placeholder, showCharacter=None):
+
+def placeholder(entry, placeholder, showCharacter=None):
     entry.insert(0, placeholder)
     entry.config(fg="grey", show="")
     def on_focus_in(event):
@@ -29,108 +48,265 @@ def placeholder( entry, placeholder, showCharacter=None):
             entry.config(fg="black")
             if showCharacter is not None:
                 entry.config(show=showCharacter)
-
     def on_focus_out(event):
         if entry.get() == "":
             entry.insert(0, placeholder)
             entry.config(fg="grey", show="")
-
     entry.bind("<FocusIn>", on_focus_in)
     entry.bind("<FocusOut>", on_focus_out)
+
 # Login Records for Admin
 login_records = []
-# Login UI
+
+# ========== LOGIN UI ==========
 login = tk.Frame(root, bg="lightblue")
 login.pack(expand=True, fill="both")
-accountImage = tk.PhotoImage(file="Frontend/Images/ProfilePicture.png")
-accountImageLabel = tk.Label(login, image=accountImage)
-usernameEntry = tk.Entry(login)
+
+# --- Center Container (Windows 10 Style Box) ---
+login_container = tk.Frame(login, bg="white", bd=0, highlightthickness=0)
+login_container.place(relx=0.5, rely=0.5, anchor="center")
+
+# Drop Shadow effect (simulated)
+shadow = tk.Frame(login, bg="#a0a0a0")
+shadow.place(relx=0.5, rely=0.5, anchor="center", x=6, y=6)
+
+login_container.tkraise()
+
+# --- Account Image  ---
+accountImage = load_image("Frontend/Images/ProfilePicture.png", (80, 80))
+accountImageLabel = tk.Label(login_container, image=accountImage, bg="white")
+accountImageLabel.image = accountImage  
+accountImageLabel.pack(pady=(20, 10))
+
+# --- Welcome Text ---
+welcomeLabel = tk.Label(
+    login_container,
+    text="Welcome",
+    font=("Segoe UI Semibold", 24),
+    bg="white",
+    fg="black"
+)
+welcomeLabel.pack(pady=(0, 5))
+
+# --- Subtitle ---
+subtitleLabel = tk.Label(
+    login_container,
+    text="Input your credentials",
+    font=("Segoe UI", 11),
+    bg="white",
+    fg="grey"
+)
+subtitleLabel.pack(pady=(0, 20))
+
+
+
+# --- Username Entry ---
+usernameEntry = tk.Entry(
+    login_container,
+    width=30,
+    font=("Segoe UI", 12),
+    relief="flat",
+    bd=5,
+    highlightthickness=1,
+    highlightcolor="#c0c0c0",
+    highlightbackground="#d0d0d0",
+    bg="white",
+    fg="black",
+    insertbackground="black"
+)
 placeholder(usernameEntry, "Enter username")
-passwordEntry = tk.Entry(login)
-placeholder(passwordEntry, "Enter password", showCharacter="*")
-incorrectPassword = tk.Label(login, text="Incorrect Username or Password", fg="red")
-loginButton = tk.Button(login, text="Login", command=lambda: loginAuthentication("user"))
-accountImageLabel.pack(expand=True)
-usernameEntry.pack()
-passwordEntry.pack()
-loginButton.pack(pady=10)
-# User Home Screen UI
-homeScreen = tk.Frame(root)
+usernameEntry.pack(pady=5, ipady=5)
+
+# --- Password Entry ---
+passwordEntry = tk.Entry(
+    login_container,
+    width=30,
+    font=("Segoe UI", 12),
+    relief="flat",
+    bd=5,
+    highlightthickness=1,
+    highlightcolor="#c0c0c0",
+    highlightbackground="#d0d0d0",
+    bg="white",
+    fg="black",
+    insertbackground="black",
+    show=""  # start visible for placeholder
+)
+placeholder(passwordEntry, "Enter password", showCharacter="•")
+passwordEntry.pack(pady=5, ipady=5)
+
+# --- Incorrect Password Label ---
+incorrectPassword = tk.Label(
+    login_container,
+    text="Incorrect Username or Password",
+    fg="red",
+    bg="white",
+    font=("Segoe UI", 10)
+)
+incorrectPassword.pack(pady=(5, 5))
+incorrectPassword.pack_forget()  # hidden until needed
+
+# --- Login Button ---
+loginButton = tk.Button(
+    login_container,
+    text="Login",
+    font=("Segoe UI Semibold", 12),
+    bg="white",            # White background
+    fg="#005A9E",          # Dark blue text
+    activebackground="#E6F0FF",  # Light blue when clicked
+    activeforeground="#003E73",  # Even darker text when clicked
+    relief="solid",
+    bd=1,
+    width=20,
+    pady=8,
+    cursor="hand2",
+    command=lambda: loginAuthentication("user")
+)
+loginButton.pack(pady=(15, 25))
+
+# Add rounded edges illusion with padding
+login_container.configure(padx=40, pady=30)
+
+# ========== USER HOME SCREEN ==========
+homeScreen = tk.Frame(root, bg="lightblue")
 taskbarHome = tk.Frame(homeScreen, bg="grey", height=40)
 taskbarHome.pack(side="bottom", fill="x")
-appFrameHome = tk.Frame(homeScreen)
-appFrameHome.pack(side="left", padx=20, pady=20)
+appFrameHome = tk.Frame(homeScreen, bg="lightblue")
+appFrameHome.pack(side="left", padx=20, pady=(40, 0), anchor="n")
+
 # Desktop icons
 recycleBin = load_image("Frontend/Images/RecycleBin.png", (50, 50))
 computer = load_image("Frontend/Images/Computer.png", (50, 50))
 folder = load_image("Frontend/Images/Folder.png", (50, 50))
-recycleBinLabel = tk.Label(appFrameHome, image=recycleBin)
-recycleBinText = tk.Label(appFrameHome, text="Recycle Bin")
-computerLabel = tk.Label(appFrameHome, image=computer)
-computerText = tk.Label(appFrameHome, text="Computer")
-folderLabel = tk.Label(appFrameHome, image=folder)
-folderText = tk.Label(appFrameHome, text="Folder")
+recycleBinLabel = tk.Label(appFrameHome, image=recycleBin, bg="lightblue", bd=0, highlightthickness=0)
+recycleBinText = tk.Label(appFrameHome, text="Recycle Bin", bg="lightblue", fg="black", bd=0, highlightthickness=0)
+computerLabel = tk.Label(appFrameHome, image=computer, bg="lightblue", bd=0, highlightthickness=0)
+computerText = tk.Label(appFrameHome, text="Computer", bg="lightblue", fg="black", bd=0, highlightthickness=0)
+folderLabel = tk.Label(appFrameHome, image=folder, bg="lightblue", bd=0, highlightthickness=0)
+folderText = tk.Label(appFrameHome, text="Folder", bg="lightblue", fg="black", bd=0, highlightthickness=0)
+
 recycleBinLabel.pack()
 recycleBinText.pack()
 computerLabel.pack()
 computerText.pack()
 folderLabel.pack()
 folderText.pack()
+
 # Taskbar icons
 accountTaskbar = load_image("Frontend/Images/ProfilePicture.png", (30, 30))
-accountTaskbarLabelHome = tk.Label(taskbarHome, image=accountTaskbar)
+accountTaskbarLabelHome = tk.Label(taskbarHome, image=accountTaskbar, bg="grey", bd=0, highlightthickness=0)
 accountTaskbarLabelHome.pack(side="left", padx=10)
-usernameHome = tk.Label(taskbarHome, text="User Account")
+usernameHome = tk.Label(taskbarHome, text="User Account", bg="grey", fg="white")
 usernameHome.pack(side="left", padx=10)
+
 # Spacer for left-only margin
 leftSpacerHome = tk.Frame(taskbarHome, width=450, bg="grey")
 leftSpacerHome.pack(side="left")
+
 # Taskbar apps
-recycleBinSmall = load_image("Frontend/Images/RecycleBin.png", (30, 30))
-computerSmall = load_image("Frontend/Images/Computer.png", (30, 30))
-folderSmall = load_image("Frontend/Images/Folder.png", (30, 30))
-tk.Label(taskbarHome, image=recycleBinSmall).pack(side="left", padx=10)
-tk.Label(taskbarHome, image=computerSmall).pack(side="left", padx=10)
-tk.Label(taskbarHome, image=folderSmall).pack(side="left", padx=10)
-logoutHomeButton = tk.Button(taskbarHome, text="Logout")
-logoutHomeButton.pack(side="right", padx=10)
-# Admin Home Screen UI
-adminScreen = tk.Frame(root)
+taskbarIconsHome = tk.Frame(taskbarHome, bg="grey")
+taskbarIconsHome.pack(expand=True)
+taskbarIconsHome.place(relx=0.5, rely=0.5, anchor="center")
+
+for img_path in [
+    "Frontend/Images/RecycleBin.png",
+    "Frontend/Images/Computer.png",
+    "Frontend/Images/Folder.png"
+]:
+    icon = load_image(img_path, (30, 30))
+    lbl = tk.Label(taskbarIconsHome, image=icon, bg="grey", bd=0, highlightthickness=0)
+    lbl.image = icon
+    lbl.pack(side="left", padx=10)
+
+logoutHomeButton = tk.Label(
+    taskbarHome,
+    text="Logout",
+    bg="grey",
+    fg="white",
+    cursor="hand2",
+    font=("Segoe UI", 10, "bold"),
+    padx=12,
+    pady=4
+)
+logoutHomeButton.pack(side="right", padx=10, pady=5)
+
+# Hover and click behavior
+def on_hover_home(e):
+    e.widget.config(bg="#5a5a5a")
+def on_leave_home(e):
+    e.widget.config(bg="grey")
+logoutHomeButton.bind("<Enter>", on_hover_home)
+logoutHomeButton.bind("<Leave>", on_leave_home)
+logoutHomeButton.bind("<Button-1>", lambda e: goToLogin())
+
+# ========== ADMIN HOME SCREEN ==========
+adminScreen = tk.Frame(root, bg="lightblue")
 taskbarAdmin = tk.Frame(adminScreen, bg="grey", height=40)
 taskbarAdmin.pack(side="bottom", fill="x")
-appFrameAdmin = tk.Frame(adminScreen)
-appFrameAdmin.pack(side="left", padx=20, pady=20)
+appFrameAdmin = tk.Frame(adminScreen, bg="lightblue")
+appFrameAdmin.pack(side="left", padx=20, pady=(40, 0), anchor="n")
+
 # Desktop icons
-tk.Label(appFrameAdmin, image=recycleBin).pack()
-tk.Label(appFrameAdmin, text="Recycle Bin").pack()
-tk.Label(appFrameAdmin, image=computer).pack()
-tk.Label(appFrameAdmin, text="Computer").pack()
-tk.Label(appFrameAdmin, image=folder).pack()
-tk.Label(appFrameAdmin, text="Folder").pack()
+tk.Label(appFrameAdmin, image=recycleBin, bg="lightblue", bd=0, highlightthickness=0).pack()
+tk.Label(appFrameAdmin, text="Recycle Bin", bg="lightblue", fg="black", bd=0, highlightthickness=0).pack()
+tk.Label(appFrameAdmin, image=computer, bg="lightblue", bd=0, highlightthickness=0).pack()
+tk.Label(appFrameAdmin, text="Computer", bg="lightblue", fg="black", bd=0, highlightthickness=0).pack()
+tk.Label(appFrameAdmin, image=folder, bg="lightblue", bd=0, highlightthickness=0).pack()
+tk.Label(appFrameAdmin, text="Folder", bg="lightblue", fg="black", bd=0, highlightthickness=0).pack()
 admin = load_image("Frontend/Images/Admin.png", (50, 50))
-adminLabel = tk.Label(appFrameAdmin, image=admin, cursor="hand2")
-adminText = tk.Label(appFrameAdmin, text="Admin")
+adminLabel = tk.Label(appFrameAdmin, image=admin, cursor="hand2", bg="lightblue", bd=0, highlightthickness=0)
+adminText = tk.Label(appFrameAdmin, text="Admin", bg="lightblue", fg="black", bd=0, highlightthickness=0)
 adminLabel.pack()
 adminLabel.bind("<Button-1>", lambda e: openAdminMonitor())
 adminText.pack()
+
 # Taskbar icons
-accountTaskbarLabelAdmin = tk.Label(taskbarAdmin, image=accountTaskbar)
+accountTaskbarLabelAdmin = tk.Label(taskbarAdmin, image=accountTaskbar, bg="grey", bd=0, highlightthickness=0)
 accountTaskbarLabelAdmin.pack(side="left", padx=10)
-usernameAdmin = tk.Label(taskbarAdmin, text="Admin Account")
+usernameAdmin = tk.Label(taskbarAdmin, text="Admin Account", bg="grey", fg="white")
 usernameAdmin.pack(side="left", padx=10)
-leftSpacerAdmin = tk.Frame(taskbarAdmin, width=450, bg="grey")
-leftSpacerAdmin.pack(side="left")
-# Taskbar apps
-tk.Label(taskbarAdmin, image=recycleBinSmall).pack(side="left", padx=10)
-tk.Label(taskbarAdmin, image=computerSmall).pack(side="left", padx=10)
-tk.Label(taskbarAdmin, image=folderSmall).pack(side="left", padx=10)
+taskbarIconsAdmin = tk.Frame(taskbarAdmin, bg="grey")
+taskbarIconsAdmin.place(relx=0.5, rely=0.5, anchor="center")
+
+
+for img_path in [
+    "Frontend/Images/RecycleBin.png",
+    "Frontend/Images/Computer.png",
+    "Frontend/Images/Folder.png"
+]:
+    icon = load_image(img_path, (30, 30))
+    lbl = tk.Label(taskbarIconsAdmin, image=icon, bg="grey")
+    lbl.image = icon
+    lbl.pack(side="left", padx=10)
+
 adminSmall = load_image("Frontend/Images/Admin.png", (30, 30))
-adminSmall = tk.Label(taskbarAdmin, image=adminSmall, cursor="hand2")
-adminSmall.pack(side="left", padx=10)
-adminSmall.bind("<Button-1>", lambda e: openAdminMonitor())
-logoutAdminButton = tk.Button(taskbarAdmin, text="Logout")
-logoutAdminButton.pack(side="right", padx=10)
-# Switching between screens
+adminLabelSmall = tk.Label(taskbarIconsAdmin, image=adminSmall, cursor="hand2", bg="grey")
+adminLabelSmall.image = adminSmall
+adminLabelSmall.pack(side="left", padx=10)
+adminLabelSmall.bind("<Button-1>", lambda e: openAdminMonitor())
+
+logoutAdminButton = tk.Label(
+    taskbarAdmin,
+    text="Logout",
+    bg="grey",
+    fg="white",
+    cursor="hand2",
+    font=("Segoe UI", 10, "bold"),
+    padx=12,
+    pady=4
+)
+logoutAdminButton.pack(side="right", padx=10, pady=5)
+
+# Hover and click behavior
+def on_hover_admin(e):
+    e.widget.config(bg="#5a5a5a")
+def on_leave_admin(e):
+    e.widget.config(bg="grey")
+logoutAdminButton.bind("<Enter>", on_hover_admin)
+logoutAdminButton.bind("<Leave>", on_leave_admin)
+logoutAdminButton.bind("<Button-1>", lambda e: goToLogin())
+
+# ========== SCREEN SWITCHING ==========
 def goToHome():
     username = usernameEntry.get() if usernameEntry.get() else "User"
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -138,44 +314,81 @@ def goToHome():
     login.pack_forget()
     adminScreen.pack_forget()
     homeScreen.pack(expand=True, fill="both")
+
 def goToAdmin():
     login.pack_forget()
     homeScreen.pack_forget()
     adminScreen.pack(expand=True, fill="both")
+
 def goToLogin():
     homeScreen.pack_forget()
     adminScreen.pack_forget()
     login.pack(expand=True, fill="both")
+
 def openAdminMonitor():
     adminMonitor = tk.Toplevel(root)
     adminMonitor.title("JR GAYAGOY SPYING MONITOR")
-    adminMonitor.geometry("400x300")
-    title = tk.Label(adminMonitor, text="Login Records", font=("Arial", 16))
-    title.pack(pady=10)
-    recordsFrame = tk.Frame(adminMonitor)
-    recordsFrame.pack(fill="both", expand=True)
-    scrollbar = tk.Scrollbar(recordsFrame)
+    adminMonitor.geometry("400x260")
+    adminMonitor.configure(bg="white")
+
+    # Title
+    title = tk.Label(
+        adminMonitor,
+        text="Login Records",
+        font=("Segoe UI Semibold", 15),
+        bg="white",
+        fg="black"
+    )
+    title.pack(pady=(10, 5))
+
+    # Table Frame
+    table_frame = tk.Frame(adminMonitor, bg="white")
+    table_frame.pack(fill="both", expand=True, padx=8, pady=5)
+
+    # Define table columns (User, Date, Time)
+    columns = ("User", "Date", "Time")
+    tree = ttk.Treeview(table_frame, columns=columns, show="headings", height=8)
+
+    tree.heading("User", text="User")
+    tree.heading("Date", text="Date")
+    tree.heading("Time", text="Time")
+
+    tree.column("User", width=120, anchor="center")
+    tree.column("Date", width=120, anchor="center")
+    tree.column("Time", width=140, anchor="center")
+
+    scrollbar = ttk.Scrollbar(table_frame, orient="vertical", command=tree.yview)
+    tree.configure(yscrollcommand=scrollbar.set)
     scrollbar.pack(side="right", fill="y")
-    listbox = tk.Listbox(recordsFrame, yscrollcommand=scrollbar.set)
+
     for record in login_records:
-        listbox.insert(tk.END, f"Username: {record[0]} | Time: {record[1]}")
-    listbox.pack(fill="both", expand=True)
-    scrollbar.config(command=listbox.yview)
-# Template for Login Authentication
+        username, login_datetime = record
+        dt_obj = datetime.strptime(login_datetime, "%Y-%m-%d %H:%M:%S")
+        tree.insert("", "end", values=(username, dt_obj.strftime("%Y-%m-%d"), dt_obj.strftime("%H:%M:%S")))
+
+    tree.pack(fill="both", expand=True, padx=5)
+
+    # Style for cleaner look
+    style = ttk.Style()
+    style.configure("Treeview", rowheight=22, font=("Segoe UI", 10))
+    style.configure("Treeview.Heading", font=("Segoe UI Semibold", 10))
+
+# ========== LOGIN AUTHENTICATION ==========
 def loginAuthentication(roleAttempt):
     username = usernameEntry.get()
     password = passwordEntry.get()
     if username in Accounts and Accounts[username]["password"] == password:
         role = Accounts[username]["role"]
+        incorrectPassword.pack_forget()
         if role == "admin":
             goToAdmin()
         else:
             goToHome()
     else:
         incorrectPassword.pack()
+
 # Button Commands
 loginButton.config(command=lambda: loginAuthentication("user"))
-logoutHomeButton.config(command=goToLogin)
-logoutAdminButton.config(command=goToLogin)
+
 # Start app
 root.mainloop()
