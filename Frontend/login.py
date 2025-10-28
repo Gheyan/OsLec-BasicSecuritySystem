@@ -3,6 +3,14 @@ import tkinter as tk
 from tkinter import ttk
 from PIL import Image, ImageTk
 from datetime import datetime
+import os
+from supabase import create_client, Client
+
+url: str = "https://ruiycrzcjmvfijxfwrqg.supabase.co"
+
+key: str ="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ1aXljcnpjam12ZmlqeGZ3cnFnIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1OTk5NzM5NywiZXhwIjoyMDc1NTczMzk3fQ.2KMDkdNso50r28zZ9lhkwiP0huEdpqR3wz3J1cPI0nY"
+
+supabase: Client = create_client(url, key)
 
 # Icons
 images = {}
@@ -28,10 +36,10 @@ def load_image(path, size):
 
 
 # Account Placeholder for Login
-Accounts = {
-    "user": {"password": "userpass", "role": "user"},
-    "admin": {"password": "adminpass", "role": "admin"}
-}
+# Accounts = {
+#     "user": {"password": "userpass", "role": "user"},
+#     "admin": {"password": "adminpass", "role": "admin"}
+# }
 
 # Root Window
 root = tk.Tk()
@@ -377,13 +385,28 @@ def openAdminMonitor():
 def loginAuthentication(roleAttempt):
     username = usernameEntry.get()
     password = passwordEntry.get()
-    if username in Accounts and Accounts[username]["password"] == password:
-        role = Accounts[username]["role"]
+
+    
+
+    response1 = (
+        supabase.table("profiles").select("is_admin, email").eq("username",username).execute()
+    )
+
+    response2 = supabase.auth.sign_in_with_password(
+        {
+            "email": str(response1.data[0]["email"]),
+            "password": str(password),
+        }
+    )
+
+    if response2.user.aud == "authenticated":
+        # role = Accounts[username]["role"]
         incorrectPassword.pack_forget()
-        if role == "admin":
+        if response1.data[0]["is_admin"]:
             goToAdmin()
         else:
             goToHome()
+        goToHome()
     else:
         incorrectPassword.pack()
 
