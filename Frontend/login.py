@@ -36,10 +36,10 @@ def load_image(path, size):
 
 
 # Account Placeholder for Login
-# Accounts = {
-#     "user": {"password": "userpass", "role": "user"},
-#     "admin": {"password": "adminpass", "role": "admin"}
-# }
+Accounts = {
+    "user": {"password": "userpass", "role": "user"},
+    "admin": {"password": "adminpass", "role": "admin"}
+}
 
 # Root Window
 root = tk.Tk()
@@ -399,6 +399,7 @@ def loginAuthentication(roleAttempt):
         }
     )
 
+    print(response1.data[0]["is_admin"])
     if response2.user.aud == "authenticated":
         # role = Accounts[username]["role"]
         incorrectPassword.pack_forget()
@@ -406,7 +407,6 @@ def loginAuthentication(roleAttempt):
             goToAdmin()
         else:
             goToHome()
-        goToHome()
     else:
         incorrectPassword.pack()
 
