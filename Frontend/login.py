@@ -43,9 +43,11 @@ Accounts = {
 
 # Root Window
 root = tk.Tk()
-root.attributes("-fullscreen", True)
 root.title("Gayagoy Basic Security System")
+root.geometry("1024x768")
 root.configure(bg="lightblue")
+root.resizable(True, True)
+
 
 def placeholder(entry, placeholder, showCharacter=None):
     entry.insert(0, placeholder)
@@ -394,8 +396,8 @@ def loginAuthentication(roleAttempt):
 
     response2 = supabase.auth.sign_in_with_password(
         {
-            "email": str(response1.data[0]["email"]),
-            "password": str(password),
+            'email': str(response1.data[0]["email"]),
+            'password': str(password),
         }
     )
 
