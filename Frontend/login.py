@@ -2,9 +2,10 @@
 import tkinter as tk
 from tkinter import ttk
 from PIL import Image, ImageTk
-from datetime import datetime
+from datetime import datetime, timezone
 import os
 from supabase import create_client, Client
+
 
 url: str = "https://ruiycrzcjmvfijxfwrqg.supabase.co"
 
@@ -335,6 +336,21 @@ def goToLogin():
     adminScreen.pack_forget()
     login.pack(expand=True, fill="both")
 
+def record_login(profile_id: str): #This is to Insert each user logins into the database and record the timestamped logins
+    supabase.table("logs").insert({
+        "profile_id": profile_id,
+        "last_log_in": datetime.now(timezone.utc).isoformat()
+    }).execute()
+
+def fetch_all_logs_for_admin(): #This is for fetching logs for admins in the logs software
+    resp = (supabase
+            .table("logs")
+            .select("last_log_in, profiles!inner(username)")
+            .order("last_log_in", desc=True)
+            .limit(500)  # tweak as you like
+            .execute())
+    return resp.data or []
+
 def openAdminMonitor():
     adminMonitor = tk.Toplevel(root)
     adminMonitor.title("JR GAYAGOY SPYING MONITOR")
@@ -359,24 +375,24 @@ def openAdminMonitor():
     columns = ("User", "Date", "Time")
     tree = ttk.Treeview(table_frame, columns=columns, show="headings", height=8)
 
-    tree.heading("User", text="User")
-    tree.heading("Date", text="Date")
-    tree.heading("Time", text="Time")
-
-    tree.column("User", width=120, anchor="center")
-    tree.column("Date", width=120, anchor="center")
-    tree.column("Time", width=140, anchor="center")
-
+    for col in columns:
+        tree.heading(col, text=col)
+        tree.column(col, width=130, anchor="center")
     scrollbar = ttk.Scrollbar(table_frame, orient="vertical", command=tree.yview)
     tree.configure(yscrollcommand=scrollbar.set)
     scrollbar.pack(side="right", fill="y")
-
-    for record in login_records:
-        username, login_datetime = record
-        dt_obj = datetime.strptime(login_datetime, "%Y-%m-%d %H:%M:%S")
-        tree.insert("", "end", values=(username, dt_obj.strftime("%Y-%m-%d"), dt_obj.strftime("%H:%M:%S")))
-
     tree.pack(fill="both", expand=True, padx=5)
+
+    try:
+        rows = fetch_all_logs_for_admin() #Call existing logins of users in the database
+        for row in rows:
+            username = row["profiles"]["username"]
+            # input format of the timezone enlisted in the supabase
+            dt = datetime.fromisoformat(row["last_log_in"].replace("Z", "+00:00"))
+            tree.insert("", "end",
+                        values=(username, dt.strftime("%Y-%m-%d"), dt.strftime("%H:%M:%S")))
+    except Exception as e:
+        print("Failed to load admin logs:", e)
 
     # Style for cleaner look
     style = ttk.Style()
@@ -390,22 +406,36 @@ def loginAuthentication(roleAttempt):
 
     
 
-    response1 = (
-        supabase.table("profiles").select("is_admin, email").eq("username",username).execute()
-    )
+    prof = (supabase.table("profiles")
+            .select("id, is_admin, email")
+            .eq("username", username)
+            .single()
+            .execute())
 
-    response2 = supabase.auth.sign_in_with_password(
-        {
-            'email': str(response1.data[0]["email"]),
-            'password': str(password),
-        }
-    )
+    if not prof.data:
+        incorrectPassword.pack()
+        return
 
-    print(response1.data[0]["is_admin"])
-    if response2.user.aud == "authenticated":
-        # role = Accounts[username]["role"]
+    email = prof.data["email"]
+    is_admin = prof.data["is_admin"]
+    profile_id = prof.data["id"]
+
+    # Auth with email/password
+    auth_resp = supabase.auth.sign_in_with_password({
+        "email": email,
+        "password": password
+    })
+
+    if getattr(auth_resp, "user", None) and auth_resp.user.aud == "authenticated":
+        
+        try:
+            record_login(profile_id)
+        except Exception as e:
+            print("Failed to write login log:", e)
+
+        
         incorrectPassword.pack_forget()
-        if response1.data[0]["is_admin"]:
+        if is_admin:
             goToAdmin()
         else:
             goToHome()
