@@ -8,7 +8,6 @@ from supabase import create_client, Client
 import pytz
 
 url: str = "https://ruiycrzcjmvfijxfwrqg.supabase.co"
-
 key: str ="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ1aXljcnpjam12ZmlqeGZ3cnFnIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1OTk5NzM5NywiZXhwIjoyMDc1NTczMzk3fQ.2KMDkdNso50r28zZ9lhkwiP0huEdpqR3wz3J1cPI0nY"
 
 supabase: Client = create_client(url, key)
@@ -34,8 +33,6 @@ def load_image(path, size):
     images[key] = photo
     return photo
 
-
-
 # Account Placeholder for Login
 Accounts = {
     "user": {"password": "userpass", "role": "user"},
@@ -48,7 +45,6 @@ root.title("Gayagoy Basic Security System")
 root.geometry("1024x768")
 root.configure(bg="lightblue")
 root.resizable(True, True)
-
 
 def placeholder(entry, placeholder, showCharacter=None):
     entry.insert(0, placeholder)
@@ -109,8 +105,6 @@ subtitleLabel = tk.Label(
 )
 subtitleLabel.pack(pady=(0, 20))
 
-
-
 # --- Username Entry ---
 usernameEntry = tk.Entry(
     login_container,
@@ -156,6 +150,17 @@ incorrectPassword = tk.Label(
 )
 incorrectPassword.pack(pady=(5, 5))
 incorrectPassword.pack_forget()  # hidden until needed
+
+# --- Cooldown Warning Label (optional enhancement) ---
+cooldownLabel = tk.Label(
+    login_container,
+    text="Cooldown active: please wait",
+    fg="orange",
+    bg="white",
+    font=("Segoe UI", 10)
+)
+cooldownLabel.pack(pady=(0,5))
+cooldownLabel.pack_forget()
 
 # --- Login Button ---
 loginButton = tk.Button(
@@ -278,7 +283,6 @@ usernameAdmin = tk.Label(taskbarAdmin, text="Admin Account", bg="grey", fg="whit
 usernameAdmin.pack(side="left", padx=10)
 taskbarIconsAdmin = tk.Frame(taskbarAdmin, bg="grey")
 taskbarIconsAdmin.place(relx=0.5, rely=0.5, anchor="center")
-
 
 for img_path in [
     "Frontend/Images/RecycleBin.png",
@@ -403,20 +407,69 @@ def openAdminMonitor():
     style.configure("Treeview.Heading", font=("Segoe UI Semibold", 10))
 
 # ========== LOGIN AUTHENTICATION ==========
+# Global cooldown state
+cooldown_active = False
+cooldown_remaining = 0
+WRONG_ATTEMPTS_LIMIT = 5
+wrong_attempts = 0
+
+def reset_cooldown():
+    global cooldown_active, cooldown_remaining, wrong_attempts
+    cooldown_active = False
+    cooldown_remaining = 0
+    wrong_attempts = 0
+    # Re-enable inputs
+    usernameEntry.config(state='normal')
+    passwordEntry.config(state='normal')
+    loginButton.config(state='normal')
+    cooldownLabel.pack_forget()
+    incorrectPassword.config(text="Incorrect Username or Password", fg="red")
+    incorrectPassword.pack_forget()
+
+def cooldown_tick():
+    global cooldown_remaining
+    cooldown_remaining -= 1
+    if cooldown_remaining <= 0:
+        reset_cooldown()
+    else:
+        root.after(1000, cooldown_tick)
+
 def loginAuthentication(roleAttempt):
+    global wrong_attempts, cooldown_active, cooldown_remaining
+
     username = usernameEntry.get()
     password = passwordEntry.get()
 
-    
+    # Early exit if cooldown is active
+    if cooldown_active:
+        return
 
-    prof = (supabase.table("profiles")
-            .select("id, is_admin, email")
-            .eq("username", username)
-            .single()
-            .execute())
-
-    if not prof.data:
+    # Basic input validation
+    if not username or username == "Enter username":
+        incorrectPassword.config(text="Please enter a username", fg="red")
         incorrectPassword.pack()
+        return
+    if not password or password == "Enter password":
+        incorrectPassword.config(text="Please enter a password", fg="red")
+        incorrectPassword.pack()
+        return
+
+    # Fetch user profile
+    try:
+        prof = (supabase.table("profiles")
+                .select("id, is_admin, email")
+                .eq("username", username)
+                .single()
+                .execute())
+    except Exception as e:
+        prof = None
+        print("Profile fetch error:", e)
+
+    if not prof or not prof.data:
+        incorrectPassword.config(text="Incorrect Username or Password", fg="red")
+        incorrectPassword.pack()
+        wrong_attempts += 1
+        _handle_failed_attempts()
         return
 
     email = prof.data["email"]
@@ -424,26 +477,50 @@ def loginAuthentication(roleAttempt):
     profile_id = prof.data["id"]
 
     # Auth with email/password
-    auth_resp = supabase.auth.sign_in_with_password({
-        "email": email,
-        "password": password
-    })
+    try:
+        auth_resp = supabase.auth.sign_in_with_password({
+            "email": email,
+            "password": password
+        })
+    except Exception as e:
+        auth_resp = None
+        print("Auth error:", e)
 
     if getattr(auth_resp, "user", None) and auth_resp.user.aud == "authenticated":
-        
+        incorrectPassword.pack_forget()
+        wrong_attempts = 0  # reset on success
         try:
             record_login(profile_id)
         except Exception as e:
             print("Failed to write login log:", e)
 
-        
-        incorrectPassword.pack_forget()
         if is_admin:
             goToAdmin()
         else:
             goToHome()
     else:
+        incorrectPassword.config(text="Incorrect Username or Password", fg="red")
         incorrectPassword.pack()
+        wrong_attempts += 1
+        _handle_failed_attempts()
+
+def _handle_failed_attempts():
+    global wrong_attempts, cooldown_active, cooldown_remaining
+    if wrong_attempts >= WRONG_ATTEMPTS_LIMIT:
+        # Start cooldown
+        cooldown_active = True
+        cooldown_remaining = 10  # seconds
+        # Disable inputs
+        usernameEntry.config(state='disabled')
+        passwordEntry.config(state='disabled')
+        loginButton.config(state='disabled')
+        cooldownLabel.config(text=f"Cooldown: {cooldown_remaining} seconds remaining")
+        cooldownLabel.pack()
+        # Begin countdown
+        root.after(1000, cooldown_tick)
+    else:
+        # Show immediate feedback (already handled by incorrectPassword)
+        pass
 
 # Button Commands
 loginButton.config(command=lambda: loginAuthentication("user"))
