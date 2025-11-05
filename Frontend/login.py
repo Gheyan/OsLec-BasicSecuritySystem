@@ -5,7 +5,7 @@ from PIL import Image, ImageTk
 from datetime import datetime, timezone
 import os
 from supabase import create_client, Client
-
+import pytz
 
 url: str = "https://ruiycrzcjmvfijxfwrqg.supabase.co"
 
@@ -384,13 +384,16 @@ def openAdminMonitor():
     tree.pack(fill="both", expand=True, padx=5)
 
     try:
+        local_tz = pytz.timezone("Asia/Manila")
+        
         rows = fetch_all_logs_for_admin() #Call existing logins of users in the database
         for row in rows:
             username = row["profiles"]["username"]
             # input format of the timezone enlisted in the supabase
-            dt = datetime.fromisoformat(row["last_log_in"].replace("Z", "+00:00"))
+            dt_utc = datetime.fromisoformat(row["last_log_in"].replace("Z", "+00:00"))
+            dt_local = dt_utc.astimezone(local_tz)
             tree.insert("", "end",
-                        values=(username, dt.strftime("%Y-%m-%d"), dt.strftime("%H:%M:%S")))
+                        values=(username, dt_local.strftime("%Y-%m-%d"), dt_local.strftime("%I:%M:%S %p")))
     except Exception as e:
         print("Failed to load admin logs:", e)
 
